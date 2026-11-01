@@ -30,7 +30,7 @@
     </script>
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -39,6 +39,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
     <style>
+        :root {
+            /* Bán kính vùng tròn hở ở giữa (Deadzone) */
+            --hole-radius: 120px;
+        }
+        @media (min-width: 768px) {
+            :root {
+                --hole-radius: 200px; 
+            }
+        }
+
         body {
             background-color: #031207;
             color: #ffffff;
@@ -77,6 +87,45 @@
             object-fit: cover;
         }
 
+        /* Chữ có viền đen, bên trong trắng */
+        .text-outline {
+            color: #ffffff;
+            -webkit-text-stroke: 1.5px #000000;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0px 6px 15px rgba(0,0,0,0.9);
+            font-weight: 900;
+        }
+
+        /* Thiết kế 4 nút bao quanh để hở 1 vùng tròn chính giữa */
+        .quadrant-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(6px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid rgba(255, 255, 255, 0.6);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* Cắt góc tạo hình tròn ở tâm */
+        .quad-tl { border-radius: 16px 16px var(--hole-radius) 16px; }
+        .quad-tr { border-radius: 16px 16px 16px var(--hole-radius); }
+        .quad-bl { border-radius: 16px var(--hole-radius) 16px 16px; }
+        .quad-br { border-radius: var(--hole-radius) 16px 16px 16px; }
+
+        .quadrant-card.active-zone {
+            border-color: #3ea044;
+            background-color: rgba(62, 160, 68, 0.4);
+            box-shadow: inset 0 0 40px rgba(62, 160, 68, 0.8), 0 0 25px rgba(62, 160, 68, 0.5);
+            transform: scale(1.02);
+            z-index: 30;
+        }
+
+        /* Vùng lỗ hở tròn ở tâm */
+        #center-deadzone-box {
+            width: calc(var(--hole-radius) * 2);
+            height: calc(var(--hole-radius) * 2);
+        }
+
         /* Loading Spinner */
         .loader {
             border: 3px solid rgba(255,255,255,0.1);
@@ -88,30 +137,51 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Hiệu ứng active cho 4 vùng đáp án */
-        .quadrant-card {
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+        /* Animation rung rinh lon bia */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg) scale(1.05); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg) scale(1.05); }
+            20% { transform: translate(-3px, 0px) rotate(1deg) scale(1.05); }
+            30% { transform: translate(3px, 2px) rotate(0deg) scale(1.05); }
+            40% { transform: translate(1px, -1px) rotate(1deg) scale(1.05); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg) scale(1.05); }
+            60% { transform: translate(-3px, 1px) rotate(0deg) scale(1.05); }
+            70% { transform: translate(3px, 1px) rotate(-1deg) scale(1.05); }
+            80% { transform: translate(-1px, -1px) rotate(1deg) scale(1.05); }
+            90% { transform: translate(1px, 2px) rotate(0deg) scale(1.05); }
+            100% { transform: translate(1px, -2px) rotate(-1deg) scale(1.05); }
         }
-        .quadrant-card.active-zone {
-            border-color: #3ea044;
-            background-color: rgba(62, 160, 68, 0.25);
-            box-shadow: 0 0 25px rgba(62, 160, 68, 0.4);
-            transform: scale(1.02);
+        .shake-active {
+            animation: shake 0.3s ease-in-out infinite;
+        }
+
+        /* Hạt nước rơi */
+        .water-drop {
+            position: fixed;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(160,220,255,0.9));
+            width: 8px;
+            height: 14px;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            pointer-events: none;
+            z-index: 50;
+            box-shadow: 0 0 5px rgba(255,255,255,0.6);
+            animation: dropFall 0.7s cubic-bezier(0.5, 0, 1, 1) forwards;
+        }
+        @keyframes dropFall {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(350px) scale(0.3); opacity: 0; }
         }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-    <!-- Left Background Image (Heineken Can 1) -->
-    <div class="fixed left-2 xl:left-10 top-1/2 -translate-y-1/2 w-[22vw] max-w-[300px] h-[75vh] z-0 hidden lg:flex justify-center items-center pointer-events-none">
-        <img src="1.jpg" alt="Heineken Can Left" class="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(0,122,51,0.5)] transition-transform duration-1000 hover:scale-105" onerror="this.src='https://placehold.co/400x800/007A33/FFFFFF?text=1.jpg+(Lon+Trai)'">
+    <!-- 2 Ảnh To 2 Bên (Thêm ID để xử lý rung rinh) -->
+    <div class="fixed left-2 xl:left-8 top-1/2 -translate-y-1/2 w-[35vw] max-w-[450px] h-[80vh] z-0 hidden lg:flex justify-center items-center pointer-events-none transition-transform duration-500">
+        <img id="can-left" src="1.jpg" alt="Heineken Can Left" class="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(0,122,51,0.6)]" onerror="this.src='https://placehold.co/450x900/007A33/FFFFFF?text=1.jpg+(Lon+Trai)'">
     </div>
 
-    <!-- Right Background Image (Heineken Can 2) -->
-    <div class="fixed right-2 xl:right-10 top-1/2 -translate-y-1/2 w-[22vw] max-w-[300px] h-[75vh] z-0 hidden lg:flex justify-center items-center pointer-events-none">
-        <img src="2.jpg" alt="Heineken Can Right" class="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(0,122,51,0.5)] transition-transform duration-1000 hover:scale-105" onerror="this.src='https://placehold.co/400x800/007A33/FFFFFF?text=2.jpg+(Lon+Phai)'">
+    <div class="fixed right-2 xl:right-8 top-1/2 -translate-y-1/2 w-[35vw] max-w-[450px] h-[80vh] z-0 hidden lg:flex justify-center items-center pointer-events-none transition-transform duration-500">
+        <img id="can-right" src="2.jpg" alt="Heineken Can Right" class="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(0,122,51,0.6)]" onerror="this.src='https://placehold.co/450x900/007A33/FFFFFF?text=2.jpg+(Lon+Phai)'">
     </div>
 
     <!-- Header -->
@@ -129,7 +199,7 @@
     <main class="flex-grow pt-24">
         <section class="container mx-auto px-6 py-16 md:py-24 text-center relative z-10">
             <div class="inline-block mb-4 px-4 py-1 rounded-full border border-heineken-green text-heineken-light text-xs font-semibold uppercase tracking-widest bg-heineken-green/10">
-                <i class="ph-fill ph-camera text-sm"></i> Tích hợp AI Camera 4 Vùng Lựa Chọn
+                <i class="ph-fill ph-camera text-sm"></i> Tích hợp AI Camera - Giao Diện Mới
             </div>
             <h1 class="font-display text-5xl md:text-7xl font-bold uppercase leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">
                 Bạn là ai trong <br> một cuộc gặp gỡ?
@@ -138,146 +208,149 @@
                 Trải nghiệm minigame tương tác. Di chuyển đầu bạn vào 1 trong 4 góc tương ứng với đáp án và giữ trong 3 giây để chọn!
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <a href="#try-it" class="btn-primary px-8 py-4 rounded-full text-white font-semibold flex items-center gap-2 w-full sm:w-auto justify-center">
-                    <i class="ph ph-magic-wand text-xl"></i> Trải nghiệm Web Demo
+                <a href="#try-it" class="btn-primary px-8 py-4 rounded-full text-white font-semibold flex items-center gap-2 w-full sm:w-auto justify-center shadow-[0_0_20px_rgba(0,122,51,0.5)]">
+                    <i class="ph ph-magic-wand text-xl"></i> Trải nghiệm Ngay
                 </a>
             </div>
         </section>
 
         <!-- Interactive Web Quiz -->
-        <section id="try-it" class="py-20 bg-gradient-to-b from-transparent to-black/90">
-            <div class="container mx-auto px-6 max-w-4xl relative">
+        <section id="try-it" class="py-20 bg-gradient-to-b from-transparent to-black/95">
+            <div class="container mx-auto px-6 max-w-5xl relative z-20">
                 
                 <div class="text-center mb-10">
-                    <h2 class="font-display text-4xl font-bold uppercase mb-4">Chơi ngay!</h2>
+                    <h2 class="font-display text-4xl font-bold text-outline uppercase mb-4 tracking-wider">Chơi ngay!</h2>
                 </div>
 
                 <!-- Quiz Container -->
-                <div id="quiz-container" class="glass-card rounded-3xl p-6 md:p-10 shadow-2xl relative min-h-[450px] flex flex-col justify-center">
+                <div id="quiz-container" class="glass-card rounded-[40px] p-4 md:p-8 shadow-2xl relative min-h-[500px] flex flex-col justify-center border-4 border-white/10 bg-black/60 backdrop-blur-md">
                     
                     <!-- Intro Screen -->
-                    <div id="quiz-intro" class="text-center animate-fade-in">
-                        <div class="w-20 h-20 mx-auto bg-heineken-green/10 rounded-full flex items-center justify-center mb-6 border border-heineken-green/30">
-                            <i class="ph-fill ph-martini text-4xl text-heineken-light"></i>
+                    <div id="quiz-intro" class="text-center animate-fade-in py-10">
+                        <div class="w-24 h-24 mx-auto bg-heineken-green/20 rounded-full flex items-center justify-center mb-6 border-2 border-heineken-green/50 shadow-[0_0_30px_rgba(0,122,51,0.4)]">
+                            <i class="ph-fill ph-martini text-5xl text-heineken-light"></i>
                         </div>
-                        <h3 class="text-2xl font-bold mb-4">Sẵn sàng nhập tiệc bằng Camera?</h3>
-                        <p class="text-gray-400 mb-8 max-w-lg mx-auto">
-                            Hệ thống sẽ chia màn hình thành 4 góc (Trên/Dưới - Trái/Phải). Vùng giữa màn hình là khu vực chờ. Hãy nghiêng đầu chọn đáp án và giữ 3 giây!
+                        <h3 class="text-3xl font-black mb-4 text-outline">Sẵn sàng nhập tiệc bằng Camera?</h3>
+                        <p class="text-gray-300 mb-8 max-w-xl mx-auto text-lg leading-relaxed">
+                            Hệ thống sẽ chia màn hình thành 4 nút bọc quanh một vùng tròn chính giữa. Hãy để khuôn mặt bạn ở vùng tròn hở, sau đó nghiêng đầu chọn đáp án và giữ 3 giây!
                         </p>
                         
                         <div class="flex justify-center">
-                            <button onclick="startCameraQuiz()" id="btn-camera-start" class="btn-primary px-8 py-4 rounded-full text-white font-bold tracking-wide flex items-center justify-center gap-2 text-lg">
-                                <i class="ph ph-camera text-2xl"></i> Bắt đầu Bật Camera & Nhập Tiệc
+                            <button onclick="startCameraQuiz()" id="btn-camera-start" class="btn-primary px-10 py-5 rounded-full text-white font-bold tracking-wide flex items-center justify-center gap-3 text-xl shadow-[0_0_25px_rgba(0,122,51,0.6)] border-2 border-white/20">
+                                <i class="ph ph-camera text-3xl"></i> Bật Camera & Nhập Tiệc
                             </button>
                         </div>
-                        <div id="camera-loading" class="hidden mt-4 flex items-center justify-center gap-2 text-heineken-light">
-                            <div class="loader"></div>
-                            <span class="text-sm font-medium">Đang xin quyền camera và tải AI Face Mesh...</span>
+                        <div id="camera-loading" class="hidden mt-6 flex items-center justify-center gap-3 text-heineken-light">
+                            <div class="loader w-8 h-8"></div>
+                            <span class="text-base font-semibold">Đang xin quyền camera và tải AI Face Mesh...</span>
                         </div>
                     </div>
 
-                    <!-- Question Screen (Camera Layout) -->
+                    <!-- Question Screen (Camera Layout enlarged) -->
                     <div id="quiz-question" class="hidden w-full relative">
                         
                         <!-- Question Title -->
                         <div class="text-center mb-6">
-                            <span id="question-counter" class="text-xs uppercase tracking-widest text-heineken-light font-bold">Câu hỏi 1/4</span>
-                            <h3 id="question-text" class="text-lg md:text-xl font-semibold mt-1 leading-snug"></h3>
+                            <span id="question-counter" class="text-sm uppercase tracking-widest text-heineken-light font-bold">Câu hỏi 1/4</span>
+                            <h3 id="question-text" class="text-2xl md:text-3xl font-black mt-2 leading-snug text-outline tracking-wide"></h3>
                         </div>
 
-                        <!-- 4 Quadrants & Camera Grid Container -->
-                        <div class="relative w-full aspect-[4/3] md:aspect-[16/9] max-h-[500px] bg-black/80 rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl">
+                        <!-- Khung Camera To Ra -->
+                        <div id="video-container-wrapper" class="relative w-full h-[60vh] md:h-[70vh] min-h-[500px] bg-black rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20">
                             
-                            <!-- Video Background -->
-                            <video id="camera_video" class="absolute inset-0 w-full h-full object-cover opacity-60" autoplay playsinline muted></video>
+                            <!-- Video Background (Hiển thị rõ nhất ở vùng tròn hở) -->
+                            <video id="camera_video" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline muted></video>
                             
-                            <!-- Vùng Khung Trống Trung Tâm (Neutral Deadzone) -->
-                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div id="center-deadzone-box" class="w-32 h-32 md:w-48 md:h-48 border-2 border-dashed border-white/30 rounded-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm transition-all">
-                                    <i class="ph ph-crosshair text-2xl text-white/50 mb-1 animate-pulse"></i>
-                                    <span class="text-[10px] md:text-xs text-gray-300 font-semibold uppercase tracking-wider text-center px-2">Vùng Trống</span>
+                            <!-- Vùng Khung Trống Trung Tâm (Lỗ Tròn Chứa Mặt) -->
+                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                <!-- Vòng tròn nét đứt để highlight vùng chờ -->
+                                <div id="center-deadzone-box" class="border-[3px] border-dashed border-white/70 rounded-full flex flex-col items-center justify-center transition-colors duration-300 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
+                                    <i class="ph ph-crosshair text-4xl text-white/80 mb-2 animate-pulse"></i>
+                                    <span class="text-xs md:text-sm text-white font-black text-outline uppercase tracking-widest text-center px-4">Vùng Chờ</span>
                                 </div>
                             </div>
 
                             <!-- Face Position Dot Tracker -->
-                            <div id="face-pointer" class="absolute w-8 h-8 bg-heineken-red border-2 border-white rounded-full shadow-[0_0_15px_#FF1018] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75 z-30 flex items-center justify-center">
-                                <div class="w-2 h-2 bg-white rounded-full"></div>
+                            <div id="face-pointer" class="absolute w-10 h-10 bg-heineken-red border-4 border-white rounded-full shadow-[0_0_20px_#FF1018] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75 z-40 flex items-center justify-center">
+                                <div class="w-3 h-3 bg-white rounded-full"></div>
                             </div>
 
-                            <!-- Grid 4 Góc tương ứng 4 đáp án -->
-                            <div class="absolute inset-0 grid grid-cols-2 grid-rows-2 p-3 gap-3 z-20 pointer-events-none">
+                            <!-- Grid 4 Góc tương ứng 4 đáp án (Thiết kế hở lỗ tròn tâm) -->
+                            <div class="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-2 z-20 pointer-events-none">
                                 
                                 <!-- Góc Trên - Trái (Đáp án A) -->
-                                <div id="quad-0" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
-                                    <div class="flex justify-between items-start">
-                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">A</span>
-                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                <div id="quad-0" class="quadrant-card quad-tl p-4 md:p-8 flex flex-col justify-start">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="w-10 h-10 rounded-full bg-white/20 border-2 border-white flex items-center justify-center font-black text-white text-lg shadow-[0_0_10px_rgba(0,0,0,0.5)]">A</span>
+                                        <div class="timer-badge hidden px-3 py-1 rounded-lg bg-heineken-green text-white font-black text-sm animate-bounce shadow-lg border border-white/50">
                                             Chọn: <span class="countdown-num">3</span>s
                                         </div>
                                     </div>
-                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                    <p class="opt-text text-lg md:text-2xl font-black text-outline leading-snug mt-2 w-[85%]"></p>
                                 </div>
 
                                 <!-- Góc Trên - Phải (Đáp án B) -->
-                                <div id="quad-1" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
-                                    <div class="flex justify-between items-start">
-                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">B</span>
-                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                <div id="quad-1" class="quadrant-card quad-tr p-4 md:p-8 flex flex-col justify-start items-end text-right">
+                                    <div class="flex justify-between items-start w-full flex-row-reverse mb-2">
+                                        <span class="w-10 h-10 rounded-full bg-white/20 border-2 border-white flex items-center justify-center font-black text-white text-lg shadow-[0_0_10px_rgba(0,0,0,0.5)]">B</span>
+                                        <div class="timer-badge hidden px-3 py-1 rounded-lg bg-heineken-green text-white font-black text-sm animate-bounce shadow-lg border border-white/50">
                                             Chọn: <span class="countdown-num">3</span>s
                                         </div>
                                     </div>
-                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                    <p class="opt-text text-lg md:text-2xl font-black text-outline leading-snug mt-2 w-[85%]"></p>
                                 </div>
 
                                 <!-- Góc Dưới - Trái (Đáp án C) -->
-                                <div id="quad-2" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
-                                    <div class="flex justify-between items-start">
-                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">C</span>
-                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                <div id="quad-2" class="quadrant-card quad-bl p-4 md:p-8 flex flex-col justify-end">
+                                    <p class="opt-text text-lg md:text-2xl font-black text-outline leading-snug mb-4 w-[85%]"></p>
+                                    <div class="flex justify-between items-end">
+                                        <span class="w-10 h-10 rounded-full bg-white/20 border-2 border-white flex items-center justify-center font-black text-white text-lg shadow-[0_0_10px_rgba(0,0,0,0.5)]">C</span>
+                                        <div class="timer-badge hidden px-3 py-1 rounded-lg bg-heineken-green text-white font-black text-sm animate-bounce shadow-lg border border-white/50">
                                             Chọn: <span class="countdown-num">3</span>s
                                         </div>
                                     </div>
-                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
                                 </div>
 
                                 <!-- Góc Dưới - Phải (Đáp án D) -->
-                                <div id="quad-3" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
-                                    <div class="flex justify-between items-start">
-                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">D</span>
-                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                <div id="quad-3" class="quadrant-card quad-br p-4 md:p-8 flex flex-col justify-end items-end text-right">
+                                    <p class="opt-text text-lg md:text-2xl font-black text-outline leading-snug mb-4 w-[85%]"></p>
+                                    <div class="flex justify-between items-end w-full flex-row-reverse">
+                                        <span class="w-10 h-10 rounded-full bg-white/20 border-2 border-white flex items-center justify-center font-black text-white text-lg shadow-[0_0_10px_rgba(0,0,0,0.5)]">D</span>
+                                        <div class="timer-badge hidden px-3 py-1 rounded-lg bg-heineken-green text-white font-black text-sm animate-bounce shadow-lg border border-white/50">
                                             Chọn: <span class="countdown-num">3</span>s
                                         </div>
                                     </div>
-                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
                                 </div>
 
                             </div>
                         </div>
 
-                        <div class="text-center mt-4">
-                            <p class="text-xs text-gray-400 italic">💡 Hướng dẫn: Đưa đầu vào ô đáp án mong muốn và giữ nguyên vị trí trong 3 giây để hệ thống chốt đáp án.</p>
+                        <div class="text-center mt-6">
+                            <p class="text-sm md:text-base text-gray-300 font-medium">💡 Hướng dẫn: Giữ mặt ở vùng hở giữa, đưa đầu vào ô đáp án (di chuyển thẳng vào phần chữ) và giữ trong 3 giây để chốt.</p>
                         </div>
                     </div>
 
                     <!-- Result Screen -->
-                    <div id="quiz-result" class="hidden text-center animate-fade-in">
-                        <p class="text-sm text-gray-400 uppercase tracking-widest mb-2">Kết quả của bạn</p>
-                        <h3 id="result-title" class="font-display text-5xl font-bold mb-2"></h3>
-                        <h4 id="result-subtitle" class="text-xl font-medium mb-6 uppercase tracking-wider"></h4>
-                        <div class="glass-card p-6 md:p-8 rounded-2xl mb-6 bg-black/40 text-left">
-                            <p id="result-desc" class="text-gray-300 leading-relaxed text-lg"></p>
+                    <div id="quiz-result" class="hidden text-center animate-fade-in py-10">
+                        <p class="text-base text-gray-400 font-bold uppercase tracking-widest mb-2">Kết quả của bạn</p>
+                        <h3 id="result-title" class="font-display text-5xl md:text-7xl text-outline font-black mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"></h3>
+                        <h4 id="result-subtitle" class="text-2xl font-bold mb-8 uppercase tracking-widest text-outline"></h4>
+                        <div class="glass-card p-8 md:p-10 rounded-3xl mb-8 bg-black/60 border-2 border-white/20 text-left shadow-2xl relative overflow-hidden">
+                            <div class="absolute -top-10 -right-10 opacity-10">
+                                <i class="ph-fill ph-quotes text-[150px]"></i>
+                            </div>
+                            <p id="result-desc" class="text-gray-200 leading-relaxed text-xl relative z-10 font-medium"></p>
                         </div>
                         
-                        <!-- Slogan Box -->
-                        <div class="mb-8 py-5 px-6 bg-heineken-green/10 border border-heineken-green/30 rounded-xl">
-                            <p class="text-heineken-light font-medium italic text-xl leading-relaxed">
+                        <div class="mb-10 py-6 px-8 bg-heineken-green/20 border-2 border-heineken-green/50 rounded-2xl shadow-[0_0_30px_rgba(0,122,51,0.3)]">
+                            <p class="text-white font-bold italic text-2xl leading-relaxed text-outline">
                                 "Bạn thuộc kiểu người nào cũng được, miễn là đừng trở thành người gây áp lực cho người khác."
                             </p>
                         </div>
                         
-                        <div class="flex justify-center mt-6">
-                            <button onclick="resetQuiz()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 font-medium">
-                                <i class="ph ph-arrow-counter-clockwise text-xl"></i> Chơi lại từ đầu
+                        <div class="flex justify-center mt-8">
+                            <button onclick="resetQuiz()" class="text-gray-300 hover:text-white transition-all hover:scale-105 flex items-center gap-3 font-bold text-xl bg-white/10 px-8 py-4 rounded-full border border-white/30 hover:bg-white/20">
+                                <i class="ph ph-arrow-counter-clockwise text-2xl"></i> Chơi lại từ đầu
                             </button>
                         </div>
                     </div>
@@ -288,6 +361,55 @@
     </main>
 
     <script>
+        // --- HIỆU ỨNG CUỘN CHUỘT: ẢNH RUNG & RƠI NƯỚC ---
+        let scrollTimeout;
+        let lastDropTime = 0;
+
+        window.addEventListener('scroll', () => {
+            const canLeft = document.getElementById('can-left');
+            const canRight = document.getElementById('can-right');
+            
+            if (canLeft) canLeft.classList.add('shake-active');
+            if (canRight) canRight.classList.add('shake-active');
+
+            const now = Date.now();
+            // Throttle việc tạo giọt nước để không quá tải
+            if (now - lastDropTime > 80) {
+                if (canLeft && Math.random() > 0.4) createWaterDrop(canLeft);
+                if (canRight && Math.random() > 0.4) createWaterDrop(canRight);
+                lastDropTime = now;
+            }
+
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (canLeft) canLeft.classList.remove('shake-active');
+                if (canRight) canRight.classList.remove('shake-active');
+            }, 200);
+        });
+
+        function createWaterDrop(element) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width === 0) return; // Phần tử bị ẩn
+
+            const drop = document.createElement('div');
+            drop.className = 'water-drop';
+            
+            // Tính toán vị trí giọt nước ngẫu nhiên rơi từ nửa dưới của lon
+            const randomX = rect.left + (Math.random() * rect.width);
+            const randomY = rect.top + (rect.height * 0.4) + (Math.random() * (rect.height * 0.6));
+
+            drop.style.left = `${randomX}px`;
+            drop.style.top = `${randomY}px`;
+            
+            document.body.appendChild(drop);
+
+            // Xóa phần tử sau khi rơi xong
+            setTimeout(() => {
+                if (drop.parentNode) drop.parentNode.removeChild(drop);
+            }, 800);
+        }
+
+
         // --- QUIZ DATA ---
         const questions = [
             {
@@ -369,15 +491,15 @@
         const videoElement = document.getElementById('camera_video');
         const facePointer = document.getElementById('face-pointer');
         const deadzoneBox = document.getElementById('center-deadzone-box');
+        const videoContainerWrapper = document.getElementById('video-container-wrapper');
 
         let faceMesh = null;
         let isCameraRunning = false;
         let animationFrameId = null;
 
-        // Tracking timing variables for 3-second hold
         let currentActiveQuadrant = -1;
         let hoverStartTime = 0;
-        const HOLD_DURATION = 3000; // 3 giây
+        const HOLD_DURATION = 3000; 
         let isSelecting = false;
 
         async function startCameraQuiz() {
@@ -396,6 +518,9 @@
             document.getElementById('camera-loading').classList.add('hidden');
             questionEl.classList.remove('hidden');
             questionEl.classList.add('animate-fade-in');
+
+            // Scroll container into full view
+            videoContainerWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             currentQuestion = 0;
             scores = { respectful: 0, storyteller: 0, connector: 0, caring: 0 };
@@ -448,14 +573,11 @@
                 const card = document.getElementById(`quad-${i}`);
                 card.querySelector('.opt-text').innerText = q.options[i];
                 
-                // VÁ LỖI TẠI ĐÂY: Xoá bỏ các class được thêm vào lúc chốt đáp án ở câu trước
-                card.classList.remove('active-zone', 'bg-heineken-green', 'border-white');
+                card.classList.remove('active-zone', 'bg-heineken-green/80', 'border-white');
                 
                 const badge = card.querySelector('.timer-badge');
                 badge.classList.add('hidden');
                 
-                // VÁ LỖI TẠI ĐÂY: Khôi phục lại thẻ <span> có class 'countdown-num'
-                // để hệ thống không bị lỗi null pointer exception khi gán .innerText
                 badge.innerHTML = `Chọn: <span class="countdown-num">3</span>s`;
             }
 
@@ -468,40 +590,48 @@
             if (questionEl.classList.contains('hidden') || isSelecting) return;
 
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                const nose = results.multiFaceLandmarks[0][1]; // Nose tip landmark
+                const nose = results.multiFaceLandmarks[0][1]; 
                 
-                // Vì video bị lật ngang (mirror), tọa độ x của mũi đảo ngược
+                // Màn hình đã lật ngang (scaleX(-1)), đảo chiều X để đồng bộ vị trí
                 const nx = 1 - nose.x; 
                 const ny = nose.y;
 
-                // Cập nhật vị trí chấm đỏ chỉ vị trí đầu trên màn hình video
                 facePointer.style.left = `${nx * 100}%`;
                 facePointer.style.top = `${ny * 100}%`;
 
-                // Định nghĩa ranh giới chia 4 vùng và khung trống trung tâm (Deadzone)
-                // Khung trống trung tâm nằm từ 35% đến 65% theo cả chiều X và Y
-                const inDeadzone = (nx >= 0.32 && nx <= 0.68 && ny >= 0.32 && ny <= 0.68);
+                // Tính toán chính xác khoảng cách từ mũi đến tâm màn hình (theo pixel)
+                const rect = videoContainerWrapper.getBoundingClientRect();
+                const W = rect.width;
+                const H = rect.height;
+                const nx_px = nx * W;
+                const ny_px = ny * H;
+                const dist = Math.sqrt(Math.pow(nx_px - W/2, 2) + Math.pow(ny_px - H/2, 2));
+
+                // Lấy bán kính vùng lỗ hở từ CSS variable
+                const rootStyles = getComputedStyle(document.documentElement);
+                const holeRadius = parseInt(rootStyles.getPropertyValue('--hole-radius')) || 120;
+
+                // Nếu nằm trong lỗ tròn chính giữa => Vùng chờ (Deadzone)
+                const inDeadzone = dist <= holeRadius;
 
                 if (inDeadzone) {
-                    // Đang ở trong khung trống trung tâm -> Không chọn gì cả
                     if (currentActiveQuadrant !== -1) {
                         resetQuadrantStates();
                     }
-                    deadzoneBox.classList.add('border-heineken-green', 'bg-heineken-green/20');
+                    deadzoneBox.classList.add('border-heineken-light', 'bg-heineken-green/20');
                 } else {
-                    deadzoneBox.classList.remove('border-heineken-green', 'bg-heineken-green/20');
+                    deadzoneBox.classList.remove('border-heineken-light', 'bg-heineken-green/20');
 
-                    // Xác định đang ở góc nào trong 4 góc (0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right)
+                    // Khi vượt ra ngoài bán kính lỗ hở, người dùng di chuyển vào cả chữ cũng sẽ nằm trong 4 vùng này
                     let quad = -1;
-                    if (nx < 0.5 && ny < 0.5) quad = 0;
-                    else if (nx >= 0.5 && ny < 0.5) quad = 1;
-                    else if (nx < 0.5 && ny >= 0.5) quad = 2;
-                    else if (nx >= 0.5 && ny >= 0.5) quad = 3;
+                    if (nx < 0.5 && ny < 0.5) quad = 0; // Trái-Trên
+                    else if (nx >= 0.5 && ny < 0.5) quad = 1; // Phải-Trên
+                    else if (nx < 0.5 && ny >= 0.5) quad = 2; // Trái-Dưới
+                    else if (nx >= 0.5 && ny >= 0.5) quad = 3; // Phải-Dưới
 
                     handleQuadrantHover(quad);
                 }
             } else {
-                // Không nhận diện được khuôn mặt
                 if (currentActiveQuadrant !== -1) {
                     resetQuadrantStates();
                 }
@@ -524,7 +654,6 @@
             const now = Date.now();
 
             if (quad !== currentActiveQuadrant) {
-                // Đổi sang góc mới
                 resetQuadrantStates();
                 currentActiveQuadrant = quad;
                 hoverStartTime = now;
@@ -533,18 +662,14 @@
                 card.classList.add('active-zone');
                 card.querySelector('.timer-badge').classList.remove('hidden');
             } else {
-                // Vẫn đang giữ đầu ở góc này -> tính thời gian
                 const elapsed = now - hoverStartTime;
                 const remainingSecs = Math.max(1, Math.ceil((HOLD_DURATION - elapsed) / 1000));
                 
                 const card = document.getElementById(`quad-${quad}`);
-                
-                // Tránh lỗi nếu phần tử đã bị ghi đè không tìm thấy (mặc dù đã fix ở renderQuestion)
                 const countdownEl = card.querySelector('.countdown-num');
                 if(countdownEl) countdownEl.innerText = remainingSecs;
 
                 if (elapsed >= HOLD_DURATION) {
-                    // Đã giữ đủ 3 giây -> Chốt đáp án!
                     isSelecting = true;
                     confirmAnswer(quad);
                 }
@@ -556,10 +681,9 @@
             const selectedType = q.types[quadIndex];
             scores[selectedType]++;
 
-            // Hiệu ứng hoàn tất chọn
             const card = document.getElementById(`quad-${quadIndex}`);
-            card.classList.add('bg-heineken-green', 'border-white');
-            card.querySelector('.timer-badge').innerHTML = `<i class="ph-bold ph-check"></i> Đã chọn!`;
+            card.classList.add('bg-heineken-green/80', 'border-white');
+            card.querySelector('.timer-badge').innerHTML = `<i class="ph-bold ph-check text-xl"></i> Đã chọn!`;
 
             setTimeout(() => {
                 currentQuestion++;
@@ -589,11 +713,11 @@
             
             const titleEl = document.getElementById('result-title');
             titleEl.innerText = res.title;
-            titleEl.className = `font-display text-4xl md:text-5xl font-bold mb-2 ${res.color}`;
+            titleEl.classList.add(res.color);
             
             const subtitleEl = document.getElementById('result-subtitle');
             subtitleEl.innerText = res.subtitle;
-            subtitleEl.className = `text-xl font-medium mb-6 uppercase tracking-wider ${res.color}`;
+            subtitleEl.classList.add(res.color);
 
             document.getElementById('result-desc').innerText = res.desc;
         }
@@ -602,6 +726,7 @@
             resultEl.classList.add('hidden');
             introEl.classList.remove('hidden');
             introEl.classList.add('animate-fade-in');
+            videoContainerWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 </body>
