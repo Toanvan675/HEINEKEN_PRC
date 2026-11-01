@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bạn Là Ai Trong Một Cuộc Gặp Gỡ? - Chiến dịch PR</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        heineken: {
+                            green: '#007A33',
+                            dark: '#031207',
+                            light: '#3ea044',
+                            red: '#FF1018',
+                            gold: '#c4a661'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Oswald', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            background-color: #031207;
+            color: #ffffff;
+            scroll-behavior: smooth;
+            background-image: radial-gradient(circle at 50% 0%, #007a3340 0%, transparent 50%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: #007A33;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: #3ea044;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(0, 122, 51, 0.8);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Camera Feed Mirror */
+        #camera_video {
+            transform: scaleX(-1);
+            object-fit: cover;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #007A33;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Hiệu ứng active cho 4 vùng đáp án */
+        .quadrant-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .quadrant-card.active-zone {
+            border-color: #3ea044;
+            background-color: rgba(62, 160, 68, 0.25);
+            box-shadow: 0 0 25px rgba(62, 160, 68, 0.4);
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-sans relative overflow-x-hidden">
+
+    <!-- Left Background Image (Heineken Can 1) -->
+    <div class="fixed left-2 xl:left-10 top-1/2 -translate-y-1/2 w-[22vw] max-w-[300px] h-[75vh] z-0 hidden lg:flex justify-center items-center pointer-events-none">
+        <img src="1.jpg" alt="Heineken Can Left" class="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(0,122,51,0.5)] transition-transform duration-1000 hover:scale-105" onerror="this.src='https://placehold.co/400x800/007A33/FFFFFF?text=1.jpg+(Lon+Trai)'">
+    </div>
+
+    <!-- Right Background Image (Heineken Can 2) -->
+    <div class="fixed right-2 xl:right-10 top-1/2 -translate-y-1/2 w-[22vw] max-w-[300px] h-[75vh] z-0 hidden lg:flex justify-center items-center pointer-events-none">
+        <img src="2.jpg" alt="Heineken Can Right" class="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(0,122,51,0.5)] transition-transform duration-1000 hover:scale-105" onerror="this.src='https://placehold.co/400x800/007A33/FFFFFF?text=2.jpg+(Lon+Phai)'">
+    </div>
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full z-50 glass-card border-b-0 border-white/10">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-star text-heineken-red text-2xl"></i>
+                <span class="font-display font-bold text-xl tracking-wider uppercase text-white">Campaign 2026</span>
+            </div>
+            <a href="#try-it" class="text-sm font-medium hover:text-heineken-light transition-colors">Thử Ngay</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="flex-grow pt-24">
+        <section class="container mx-auto px-6 py-16 md:py-24 text-center relative z-10">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full border border-heineken-green text-heineken-light text-xs font-semibold uppercase tracking-widest bg-heineken-green/10">
+                <i class="ph-fill ph-camera text-sm"></i> Tích hợp AI Camera 4 Vùng Lựa Chọn
+            </div>
+            <h1 class="font-display text-5xl md:text-7xl font-bold uppercase leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">
+                Bạn là ai trong <br> một cuộc gặp gỡ?
+            </h1>
+            <p class="text-gray-400 max-w-2xl mx-auto text-lg mb-10 leading-relaxed">
+                Trải nghiệm bộ lọc TikTok tương tác bằng chuyển động đầu. Đưa đầu vào 1 trong 4 góc tương ứng với đáp án và giữ trong 3 giây để chọn!
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <a href="#try-it" class="btn-primary px-8 py-4 rounded-full text-white font-semibold flex items-center gap-2 w-full sm:w-auto justify-center">
+                    <i class="ph ph-magic-wand text-xl"></i> Trải nghiệm Web Demo
+                </a>
+            </div>
+        </section>
+
+        <!-- Interactive Web Quiz -->
+        <section id="try-it" class="py-20 bg-gradient-to-b from-transparent to-black/90">
+            <div class="container mx-auto px-6 max-w-4xl relative">
+                
+                <div class="text-center mb-10">
+                    <h2 class="font-display text-4xl font-bold uppercase mb-4">Chơi Thử Web Demo</h2>
+                </div>
+
+                <!-- Quiz Container -->
+                <div id="quiz-container" class="glass-card rounded-3xl p-6 md:p-10 shadow-2xl relative min-h-[450px] flex flex-col justify-center">
+                    
+                    <!-- Intro Screen -->
+                    <div id="quiz-intro" class="text-center animate-fade-in">
+                        <div class="w-20 h-20 mx-auto bg-heineken-green/10 rounded-full flex items-center justify-center mb-6 border border-heineken-green/30">
+                            <i class="ph-fill ph-martini text-4xl text-heineken-light"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4">Sẵn sàng nhập tiệc bằng Camera?</h3>
+                        <p class="text-gray-400 mb-8 max-w-lg mx-auto">
+                            Hệ thống sẽ chia màn hình thành 4 góc (Trên/Dưới - Trái/Phải). Vùng giữa màn hình là khu vực chờ. Hãy nghiêng đầu chọn đáp án và giữ 3 giây!
+                        </p>
+                        
+                        <div class="flex justify-center">
+                            <button onclick="startCameraQuiz()" id="btn-camera-start" class="btn-primary px-8 py-4 rounded-full text-white font-bold tracking-wide flex items-center justify-center gap-2 text-lg">
+                                <i class="ph ph-camera text-2xl"></i> Bắt đầu Bật Camera & Nhập Tiệc
+                            </button>
+                        </div>
+                        <div id="camera-loading" class="hidden mt-4 flex items-center justify-center gap-2 text-heineken-light">
+                            <div class="loader"></div>
+                            <span class="text-sm font-medium">Đang xin quyền camera và tải AI Face Mesh...</span>
+                        </div>
+                    </div>
+
+                    <!-- Question Screen (Camera Layout) -->
+                    <div id="quiz-question" class="hidden w-full relative">
+                        
+                        <!-- Question Title -->
+                        <div class="text-center mb-6">
+                            <span id="question-counter" class="text-xs uppercase tracking-widest text-heineken-light font-bold">Câu hỏi 1/4</span>
+                            <h3 id="question-text" class="text-lg md:text-xl font-semibold mt-1 leading-snug"></h3>
+                        </div>
+
+                        <!-- 4 Quadrants & Camera Grid Container -->
+                        <div class="relative w-full aspect-[4/3] md:aspect-[16/9] max-h-[500px] bg-black/80 rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl">
+                            
+                            <!-- Video Background -->
+                            <video id="camera_video" class="absolute inset-0 w-full h-full object-cover opacity-60" autoplay playsinline muted></video>
+                            
+                            <!-- Vùng Khung Trống Trung Tâm (Neutral Deadzone) -->
+                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div id="center-deadzone-box" class="w-32 h-32 md:w-48 md:h-48 border-2 border-dashed border-white/30 rounded-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm transition-all">
+                                    <i class="ph ph-crosshair text-2xl text-white/50 mb-1 animate-pulse"></i>
+                                    <span class="text-[10px] md:text-xs text-gray-300 font-semibold uppercase tracking-wider text-center px-2">Vùng Trống (Đang Chờ)</span>
+                                </div>
+                            </div>
+
+                            <!-- Face Position Dot Tracker -->
+                            <div id="face-pointer" class="absolute w-8 h-8 bg-heineken-red border-2 border-white rounded-full shadow-[0_0_15px_#FF1018] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75 z-30 flex items-center justify-center">
+                                <div class="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+
+                            <!-- Grid 4 Góc tương ứng 4 đáp án -->
+                            <div class="absolute inset-0 grid grid-cols-2 grid-rows-2 p-3 gap-3 z-20 pointer-events-none">
+                                
+                                <!-- Góc Trên - Trái (Đáp án A) -->
+                                <div id="quad-0" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
+                                    <div class="flex justify-between items-start">
+                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">A</span>
+                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                            Chọn: <span class="countdown-num">3</span>s
+                                        </div>
+                                    </div>
+                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                </div>
+
+                                <!-- Góc Trên - Phải (Đáp án B) -->
+                                <div id="quad-1" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
+                                    <div class="flex justify-between items-start">
+                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">B</span>
+                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                            Chọn: <span class="countdown-num">3</span>s
+                                        </div>
+                                    </div>
+                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                </div>
+
+                                <!-- Góc Dưới - Trái (Đáp án C) -->
+                                <div id="quad-2" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
+                                    <div class="flex justify-between items-start">
+                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">C</span>
+                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                            Chọn: <span class="countdown-num">3</span>s
+                                        </div>
+                                    </div>
+                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                </div>
+
+                                <!-- Góc Dưới - Phải (Đáp án D) -->
+                                <div id="quad-3" class="quadrant-card glass-card rounded-xl p-4 flex flex-col justify-between border-2 border-white/20">
+                                    <div class="flex justify-between items-start">
+                                        <span class="w-8 h-8 rounded-full bg-black/60 border border-white/30 flex items-center justify-center font-bold text-heineken-light text-sm">D</span>
+                                        <div class="timer-badge hidden px-2 py-0.5 rounded bg-heineken-green text-white font-bold text-xs animate-bounce">
+                                            Chọn: <span class="countdown-num">3</span>s
+                                        </div>
+                                    </div>
+                                    <p class="opt-text text-sm md:text-base font-medium text-white leading-snug mt-2"></p>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <p class="text-xs text-gray-400 italic">💡 Hướng dẫn: Đưa đầu vào ô đáp án mong muốn và giữ nguyên vị trí trong 3 giây để hệ thống chốt đáp án.</p>
+                        </div>
+                    </div>
+
+                    <!-- Result Screen -->
+                    <div id="quiz-result" class="hidden text-center animate-fade-in">
+                        <p class="text-sm text-gray-400 uppercase tracking-widest mb-2">Kết quả của bạn</p>
+                        <h3 id="result-title" class="font-display text-5xl font-bold mb-2"></h3>
+                        <h4 id="result-subtitle" class="text-xl font-medium mb-6 uppercase tracking-wider"></h4>
+                        <div class="glass-card p-6 md:p-8 rounded-2xl mb-6 bg-black/40 text-left">
+                            <p id="result-desc" class="text-gray-300 leading-relaxed text-lg"></p>
+                        </div>
+                        
+                        <!-- Slogan Box -->
+                        <div class="mb-8 py-5 px-6 bg-heineken-green/10 border border-heineken-green/30 rounded-xl">
+                            <p class="text-heineken-light font-medium italic text-xl leading-relaxed">
+                                "Bạn thuộc kiểu người nào cũng được, miễn là đừng trở thành người gây áp lực cho người khác."
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="resetQuiz()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 font-medium">
+                                <i class="ph ph-arrow-counter-clockwise text-xl"></i> Chơi lại từ đầu
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- QUIZ DATA ---
+        const questions = [
+            {
+                text: "Câu 1: Khi một người bạn từ chối lời mời uống, bạn sẽ làm gì?",
+                options: [
+                    "Tôn trọng lựa chọn của bạn.",
+                    "Hỏi xem bạn có muốn dùng đồ uống khác không.",
+                    "Chuyển sang một câu chuyện vui khác.",
+                    "Hỏi han xem bạn có mệt hay muốn về sớm nghỉ ngơi không."
+                ],
+                types: ["respectful", "connector", "storyteller", "caring"]
+            },
+            {
+                text: "Câu 2: Khi không khí buổi tiệc trở nên trầm lắng, bạn thường làm gì?",
+                options: [
+                    "Chủ động bắt chuyện với người bên cạnh.",
+                    "Kể một câu chuyện hài hước hoặc sự cố vui.",
+                    "Đề xuất một trò chơi tập thể nhẹ nhàng.",
+                    "Lấy thêm đồ ăn nhẹ cho mọi người nghỉ ngơi."
+                ],
+                types: ["connector", "storyteller", "respectful", "caring"]
+            },
+            {
+                text: "Câu 3: Khi có người trong nhóm cảm thấy không thoải mái, bạn sẽ?",
+                options: [
+                    "Tôn trọng không gian riêng của họ.",
+                    "Giúp họ hòa nhập vào cuộc trò chuyện chung.",
+                    "Nói đùa nhẹ nhàng để làm dịu bầu không khí.",
+                    "Gợi ý đưa họ về nhà nếu họ cảm thấy không khỏe."
+                ],
+                types: ["respectful", "connector", "storyteller", "caring"]
+            },
+            {
+                text: "Câu 4: Theo bạn, điều gì làm nên một cuộc gặp gỡ đáng nhớ?",
+                options: [
+                    "Sự thoải mái, là chính mình của mỗi người.",
+                    "Những câu chuyện thú vị được chia sẻ.",
+                    "Sự gắn kết và khoảnh khắc vui vẻ bên nhau.",
+                    "Sự an toàn và chu đáo dành cho nhau."
+                ],
+                types: ["respectful", "storyteller", "connector", "caring"]
+            }
+        ];
+
+        const resultsData = {
+            "respectful": {
+                title: "THE RESPECTFUL",
+                subtitle: "Người Bạn Tinh Tế",
+                desc: "Luôn tôn trọng lựa chọn và cảm xúc của người khác. Bạn hiểu rằng không phải ai cũng có cùng sở thích. Sự hiện diện của bạn mang lại cảm giác an toàn và thoải mái tuyệt đối cho những người xung quanh.",
+                color: "text-heineken-light"
+            },
+            "storyteller": {
+                title: "THE STORYTELLER",
+                subtitle: "Người Kể Chuyện",
+                desc: "Bạn luôn biết cách tạo không khí bằng những câu chuyện thú vị và sự hài hước. Dù buổi tiệc có trầm lắng đến đâu, bạn luôn có cách biến nó thành một sân khấu ngập tràn tiếng cười.",
+                color: "text-[#c4a661]"
+            },
+            "connector": {
+                title: "THE CONNECTOR",
+                subtitle: "Người Kết Nối",
+                desc: "Bạn là chất keo dính của cả nhóm. Luôn chủ động tạo sự gắn kết, quan tâm đến tất cả mọi người và đảm bảo không ai bị bỏ lại phía sau trong các cuộc gặp gỡ.",
+                color: "text-blue-400"
+            },
+            "caring": {
+                title: "THE CARING ONE",
+                subtitle: "Người Bạn Quan Tâm",
+                desc: "Luôn chú ý đến cảm xúc của mọi người, quan tâm đến sự an toàn của cả nhóm và là người thường xuyên nhắc nhở anh em về nhà an toàn. Ở bên bạn, mọi người luôn cảm thấy được bảo vệ.",
+                color: "text-heineken-red"
+            }
+        };
+
+        let currentQuestion = 0;
+        let scores = { respectful: 0, storyteller: 0, connector: 0, caring: 0 };
+
+        // DOM elements
+        const introEl = document.getElementById('quiz-intro');
+        const questionEl = document.getElementById('quiz-question');
+        const resultEl = document.getElementById('quiz-result');
+        const videoElement = document.getElementById('camera_video');
+        const facePointer = document.getElementById('face-pointer');
+        const deadzoneBox = document.getElementById('center-deadzone-box');
+
+        let faceMesh = null;
+        let isCameraRunning = false;
+        let animationFrameId = null;
+
+        // Tracking timing variables for 3-second hold
+        let currentActiveQuadrant = -1;
+        let hoverStartTime = 0;
+        const HOLD_DURATION = 3000; // 3 giây
+        let isSelecting = false;
+
+        async function startCameraQuiz() {
+            document.getElementById('btn-camera-start').classList.add('hidden');
+            document.getElementById('camera-loading').classList.remove('hidden');
+
+            const success = await initCamera();
+            if (!success) {
+                alert("Không thể khởi động camera. Vui lòng cấp quyền camera trong trình duyệt.");
+                document.getElementById('camera-loading').classList.add('hidden');
+                document.getElementById('btn-camera-start').classList.remove('hidden');
+                return;
+            }
+
+            introEl.classList.add('hidden');
+            document.getElementById('camera-loading').classList.add('hidden');
+            questionEl.classList.remove('hidden');
+            questionEl.classList.add('animate-fade-in');
+
+            currentQuestion = 0;
+            scores = { respectful: 0, storyteller: 0, connector: 0, caring: 0 };
+            isSelecting = false;
+            renderQuestion();
+        }
+
+        async function initCamera() {
+            if (isCameraRunning) return true;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                videoElement.srcObject = stream;
+
+                faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: false,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                faceMesh.onResults(onFaceResults);
+
+                await new Promise((resolve) => {
+                    videoElement.onloadedmetadata = () => resolve();
+                });
+                videoElement.play();
+
+                isCameraRunning = true;
+                loopVideoFrame();
+                return true;
+            } catch (err) {
+                console.error("Camera error:", err);
+                return false;
+            }
+        }
+
+        async function loopVideoFrame() {
+            if (isCameraRunning && videoElement.readyState >= 2) {
+                await faceMesh.send({image: videoElement});
+            }
+            animationFrameId = requestAnimationFrame(loopVideoFrame);
+        }
+
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById('question-counter').innerText = `Câu hỏi ${currentQuestion + 1}/4`;
+            document.getElementById('question-text').innerText = q.text;
+
+            for (let i = 0; i < 4; i++) {
+                const card = document.getElementById(`quad-${i}`);
+                card.querySelector('.opt-text').innerText = q.options[i];
+                
+                // VÁ LỖI TẠI ĐÂY: Xoá bỏ các class được thêm vào lúc chốt đáp án ở câu trước
+                card.classList.remove('active-zone', 'bg-heineken-green', 'border-white');
+                
+                const badge = card.querySelector('.timer-badge');
+                badge.classList.add('hidden');
+                
+                // VÁ LỖI TẠI ĐÂY: Khôi phục lại thẻ <span> có class 'countdown-num'
+                // để hệ thống không bị lỗi null pointer exception khi gán .innerText
+                badge.innerHTML = `Chọn: <span class="countdown-num">3</span>s`;
+            }
+
+            currentActiveQuadrant = -1;
+            hoverStartTime = 0;
+            isSelecting = false;
+        }
+
+        function onFaceResults(results) {
+            if (questionEl.classList.contains('hidden') || isSelecting) return;
+
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const nose = results.multiFaceLandmarks[0][1]; // Nose tip landmark
+                
+                // Vì video bị lật ngang (mirror), tọa độ x của mũi đảo ngược
+                const nx = 1 - nose.x; 
+                const ny = nose.y;
+
+                // Cập nhật vị trí chấm đỏ chỉ vị trí đầu trên màn hình video
+                facePointer.style.left = `${nx * 100}%`;
+                facePointer.style.top = `${ny * 100}%`;
+
+                // Định nghĩa ranh giới chia 4 vùng và khung trống trung tâm (Deadzone)
+                // Khung trống trung tâm nằm từ 35% đến 65% theo cả chiều X và Y
+                const inDeadzone = (nx >= 0.32 && nx <= 0.68 && ny >= 0.32 && ny <= 0.68);
+
+                if (inDeadzone) {
+                    // Đang ở trong khung trống trung tâm -> Không chọn gì cả
+                    if (currentActiveQuadrant !== -1) {
+                        resetQuadrantStates();
+                    }
+                    deadzoneBox.classList.add('border-heineken-green', 'bg-heineken-green/20');
+                } else {
+                    deadzoneBox.classList.remove('border-heineken-green', 'bg-heineken-green/20');
+
+                    // Xác định đang ở góc nào trong 4 góc (0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right)
+                    let quad = -1;
+                    if (nx < 0.5 && ny < 0.5) quad = 0;
+                    else if (nx >= 0.5 && ny < 0.5) quad = 1;
+                    else if (nx < 0.5 && ny >= 0.5) quad = 2;
+                    else if (nx >= 0.5 && ny >= 0.5) quad = 3;
+
+                    handleQuadrantHover(quad);
+                }
+            } else {
+                // Không nhận diện được khuôn mặt
+                if (currentActiveQuadrant !== -1) {
+                    resetQuadrantStates();
+                }
+            }
+        }
+
+        function resetQuadrantStates() {
+            if (currentActiveQuadrant !== -1) {
+                const oldCard = document.getElementById(`quad-${currentActiveQuadrant}`);
+                if (oldCard) {
+                    oldCard.classList.remove('active-zone');
+                    oldCard.querySelector('.timer-badge').classList.add('hidden');
+                }
+            }
+            currentActiveQuadrant = -1;
+            hoverStartTime = 0;
+        }
+
+        function handleQuadrantHover(quad) {
+            const now = Date.now();
+
+            if (quad !== currentActiveQuadrant) {
+                // Đổi sang góc mới
+                resetQuadrantStates();
+                currentActiveQuadrant = quad;
+                hoverStartTime = now;
+
+                const card = document.getElementById(`quad-${quad}`);
+                card.classList.add('active-zone');
+                card.querySelector('.timer-badge').classList.remove('hidden');
+            } else {
+                // Vẫn đang giữ đầu ở góc này -> tính thời gian
+                const elapsed = now - hoverStartTime;
+                const remainingSecs = Math.max(1, Math.ceil((HOLD_DURATION - elapsed) / 1000));
+                
+                const card = document.getElementById(`quad-${quad}`);
+                
+                // Tránh lỗi nếu phần tử đã bị ghi đè không tìm thấy (mặc dù đã fix ở renderQuestion)
+                const countdownEl = card.querySelector('.countdown-num');
+                if(countdownEl) countdownEl.innerText = remainingSecs;
+
+                if (elapsed >= HOLD_DURATION) {
+                    // Đã giữ đủ 3 giây -> Chốt đáp án!
+                    isSelecting = true;
+                    confirmAnswer(quad);
+                }
+            }
+        }
+
+        function confirmAnswer(quadIndex) {
+            const q = questions[currentQuestion];
+            const selectedType = q.types[quadIndex];
+            scores[selectedType]++;
+
+            // Hiệu ứng hoàn tất chọn
+            const card = document.getElementById(`quad-${quadIndex}`);
+            card.classList.add('bg-heineken-green', 'border-white');
+            card.querySelector('.timer-badge').innerHTML = `<i class="ph-bold ph-check"></i> Đã chọn!`;
+
+            setTimeout(() => {
+                currentQuestion++;
+                if (currentQuestion < questions.length) {
+                    renderQuestion();
+                } else {
+                    showResult();
+                }
+            }, 800);
+        }
+
+        function showResult() {
+            questionEl.classList.add('hidden');
+            resultEl.classList.remove('hidden');
+
+            let highestScore = 0;
+            let resultType = 'respectful';
+
+            for (const [type, score] of Object.entries(scores)) {
+                if (score > highestScore) {
+                    highestScore = score;
+                    resultType = type;
+                }
+            }
+
+            const res = resultsData[resultType];
+            
+            const titleEl = document.getElementById('result-title');
+            titleEl.innerText = res.title;
+            titleEl.className = `font-display text-4xl md:text-5xl font-bold mb-2 ${res.color}`;
+            
+            const subtitleEl = document.getElementById('result-subtitle');
+            subtitleEl.innerText = res.subtitle;
+            subtitleEl.className = `text-xl font-medium mb-6 uppercase tracking-wider ${res.color}`;
+
+            document.getElementById('result-desc').innerText = res.desc;
+        }
+
+        function resetQuiz() {
+            resultEl.classList.add('hidden');
+            introEl.classList.remove('hidden');
+            introEl.classList.add('animate-fade-in');
+        }
+    </script>
+</body>
+</html>
